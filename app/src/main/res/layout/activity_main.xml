@@ -53,18 +53,21 @@
 
 
     <ImageView
+        android:layout_centerHorizontal="true"
         android:layout_marginTop="620px"
         android:layout_marginLeft="120px"
-        android:layout_width="850px"
-        android:layout_height="580px" />
+        android:layout_width="576px"
+        android:layout_height="576px"
+    />
 
 
     <com.facebook.drawee.view.SimpleDraweeView
         android:id="@+id/card_image"
-        android:layout_marginTop="645px"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="620px"
         android:layout_marginLeft="120px"
-        android:layout_width="840px"
-        android:layout_height="550px"
+        android:layout_width="576px"
+        android:layout_height="576px"
         android:scaleType="fitXY"
     />
 
@@ -156,6 +159,39 @@
         android:layout_alignParentBottom="true"
         android:layout_marginLeft="38dp"
         android:layout_marginBottom="18dp"/>
+
+
+    <Button
+        android:id="@+id/btn_run"
+        android:background="@android:color/transparent"
+        android:layout_width="208px"
+        android:layout_height="208px"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="18dp"
+        android:layout_centerHorizontal="true"
+    />
+
+    <ImageView
+        android:id="@+id/correr_img"
+        android:visibility="invisible"
+        android:src="@drawable/run_normal"
+        android:layout_width="208px"
+        android:layout_height="208px"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="18dp"
+        android:layout_centerHorizontal="true"
+        />
+    <ImageView
+        android:id="@+id/correr_push_img"
+        android:visibility="invisible"
+        android:src="@drawable/run_push"
+        android:layout_width="208px"
+        android:layout_height="208px"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="18dp"
+        android:layout_centerHorizontal="true"
+        />
+
 
 
 

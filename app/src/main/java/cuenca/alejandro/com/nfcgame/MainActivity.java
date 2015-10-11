@@ -5,6 +5,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
@@ -56,23 +58,25 @@ public class MainActivity extends Activity {
     public static final String MIME_TEXT_PLAIN = "text/plain";
     private NfcAdapter mNfcAdapter;
 
-    @Bind(R.id.punohover)ImageView punohover;
-    @Bind(R.id.image_life_bar) ImageView lifeBar;
-    @Bind(R.id.monster_life_bar) ImageView mosterLifeBar;
-    @Bind(R.id.right_hand) ImageView rightHand;
-    @Bind(R.id.weapon) SimpleDraweeView weaponImage;
-    @Bind(R.id.enemy_weapon) SimpleDraweeView enemyWeaponImage;
     @Bind(R.id.enemy_damage) TextView enemyDamage;
-
     @Bind(R.id.time_counter) TextView timeCounter;
     @Bind(R.id.text_actions) TextView textActions;
     @Bind(R.id.text_events) TextView textEvents;
     @Bind(R.id.life_number) TextView lifeNumber;
     @Bind(R.id.card_health) TextView cardHealth;
-
     @Bind(R.id.text_damage) TextView textDamage;
     @Bind(R.id.text_duration) TextView textDuration;
+
+    @Bind(R.id.weapon) SimpleDraweeView weaponImage;
     @Bind(R.id.card_image) SimpleDraweeView cardImage;
+    @Bind(R.id.enemy_weapon) SimpleDraweeView enemyWeaponImage;
+
+    @Bind(R.id.punohover)ImageView punohover;
+    @Bind(R.id.right_hand) ImageView rightHand;
+    @Bind(R.id.image_life_bar) ImageView lifeBar;
+    @Bind(R.id.monster_life_bar) ImageView mosterLifeBar;
+    @Bind(R.id.correr_img) ImageView runImage;
+    @Bind(R.id.correr_push_img) ImageView runPushImage;
 
 
     private Activity activity;
@@ -81,7 +85,7 @@ public class MainActivity extends Activity {
     private String key = "null";
 
     private boolean over;
-    private static String base_url = "http://hero.localtunnel.me/";
+    private static String base_url = "http://nfchero.localtunnel.me/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +99,8 @@ public class MainActivity extends Activity {
         activity = this;
 
         setImage(cardImage, "images/nothing.jpeg");
+
+        //playSound("sounds/monster-orc-dies.wav");
 
         new CountDownTimer(300000, 1000) {
             public void onTick(long millisUntilFinished) {
@@ -110,15 +116,21 @@ public class MainActivity extends Activity {
         handleIntent(getIntent());
     }
 
+
+    @OnClick(R.id.btn_run)
+    public void runAction(){
+        Toast.makeText(activity, "Correr como nena", Toast.LENGTH_SHORT).show();
+    }
+
     @OnClick(R.id.btn_action1)
     public void actionBtn1(){
-        Toast.makeText(activity, "Apretaste el boton de golpe", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(activity, "Apretaste el boton de golpe", Toast.LENGTH_SHORT).show();
         volleyRequest(nfcTagValue + "/0");
     }
 
     @OnClick(R.id.btn_action2)
     public void actionBtn2(){
-        Toast.makeText(activity, "Apretaste el boton secundario", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(activity, "Apretaste el boton secundario", Toast.LENGTH_SHORT).show();
         volleyRequest(nfcTagValue + "/1");
     }
 
@@ -128,6 +140,16 @@ public class MainActivity extends Activity {
             punohover.setVisibility(View.VISIBLE);
         } else if (event.getAction() == MotionEvent.ACTION_UP) {
             punohover.setVisibility(View.INVISIBLE);
+        }
+        return false;
+    }
+
+    @OnTouch(R.id.btn_run)
+    public boolean changeRunImage(View v, MotionEvent event){
+        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+            runPushImage.setVisibility(View.VISIBLE);
+        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+            runPushImage.setVisibility(View.INVISIBLE);
         }
         return false;
     }
@@ -182,6 +204,10 @@ public class MainActivity extends Activity {
             ChangeLifeBar(lifeBar, player.getInt("health"));
             lifeNumber.setText(player.getString("health"));
 
+            if(jsonResponse.has("sound") && !jsonResponse.isNull("sound")){
+                playSound(jsonResponse.getString("sound"));
+            }
+
 
             if (player.isNull("weapon")) {
                 textDamage.setVisibility(View.INVISIBLE);
@@ -210,6 +236,7 @@ public class MainActivity extends Activity {
                 textEvents.setText(card.getString("desc"));
 
                 if (card.getString("type").equals("minion") || card.getString("type").equals("boss")) {
+                    runImage.setVisibility(View.VISIBLE);
                     ChangeLifeBar(mosterLifeBar, card.getInt("health"));
 
                     cardHealth.setText(card.getString("health"));
@@ -227,6 +254,7 @@ public class MainActivity extends Activity {
                     enemyDamage.setText(weaponDamage(enemyWeapon));
                     enemyDamage.setVisibility(View.VISIBLE);
                 } else {
+                    runImage.setVisibility(View.INVISIBLE);
                     cardHealth.setVisibility(View.INVISIBLE);
                     mosterLifeBar.setVisibility(View.INVISIBLE);
                     enemyWeaponImage.setVisibility(View.INVISIBLE);
@@ -245,9 +273,24 @@ public class MainActivity extends Activity {
 
     }
 
+    private void playSound(String sound) {
+        try {
+            Uri myUri = Uri.parse(base_url + sound);
+            MediaPlayer mediaPlayer = new MediaPlayer();
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mediaPlayer.setDataSource(activity, myUri);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+
+            //MediaPlayer mediaPlayer = MediaPlayer.create(activity, R.raw.bs);
+            //mediaPlayer.start(); // no need to call prepare(); create() does that for you
+
+        }catch (Exception e){}
+    }
+
     private void ChangeLifeBar(ImageView lifebar, int health){
         lifebar.getLayoutParams().width = 45 * health;
-        lifebar.getLayoutParams().height = 110;
+        //lifebar.getLayoutParams().height = 110;
         lifebar.requestLayout();
     }
 
