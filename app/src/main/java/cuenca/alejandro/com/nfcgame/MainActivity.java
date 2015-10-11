@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
@@ -27,6 +28,9 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.interfaces.DraweeController;
+import com.facebook.drawee.view.SimpleDraweeView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -60,6 +64,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Fresco.initialize(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
@@ -67,6 +72,15 @@ public class MainActivity extends Activity {
         ButterKnife.bind(this);
 
         activity = this;
+
+        Uri uri = Uri.parse("http://nfcg.herokuapp.com/images/12035409_10153719305827229_1005534528_n.gif");
+        SimpleDraweeView draweeView = (SimpleDraweeView) findViewById(R.id.card_image);
+
+        DraweeController controller = Fresco.newDraweeControllerBuilder()
+                .setUri(uri)
+                .setAutoPlayAnimations(true)
+        .build();
+        draweeView.setController(controller);
 
 
         new CountDownTimer(300000, 1000) {
@@ -139,7 +153,10 @@ public class MainActivity extends Activity {
         JSONObject jsonResponse = new JSONObject(response);
 
         JSONObject playerJSON = jsonResponse.getJSONObject("player");
-        Player player = new Player((String) playerJSON.getString("health"), (String) playerJSON.getString("damage"), null);
+        Player player = new Player(
+                (String) playerJSON.getString("health"),
+                (String) playerJSON.getString("damage"),
+                null);
 
         Log.d("Player_logs", player.getHealth());
         lifeBar.getLayoutParams().width = 45 * (Integer.parseInt(player.getHealth()) -1 );
