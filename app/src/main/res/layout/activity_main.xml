@@ -275,8 +275,10 @@
     <com.facebook.drawee.view.SimpleDraweeView
         android:id="@+id/game_over_img"
         android:visibility="invisible"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="890px"
+        android:layout_marginLeft="100px"
+        android:layout_height="810px"
+        android:layout_marginTop="400px"
         android:scaleType="fitXY"
     />
 

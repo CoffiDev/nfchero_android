@@ -299,18 +299,16 @@ public class MainActivity extends Activity {
        if(cdt != null) {
             cdt.cancel();
         }
-        gameOverImage.setVisibility(View.VISIBLE);
-        setImage(gameOverImage, "/image/game_over.gif");
         Toast.makeText(activity, "GAME OVER!!", Toast.LENGTH_LONG).show();
-        MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.background_sound);
-        mediaPlayer.start();
+        gameOverImage.setVisibility(View.VISIBLE);
+        setImage(gameOverImage, "/images/game_over.gif");
     }
 
     public void gameWin(){
         if(cdt != null) {
             cdt.cancel();
         }
-        setImage(gameOverImage, "/image/game_over.gif");
+        setImage(gameOverImage, "/images/win.gif");
         Toast.makeText(activity, "You Win!!", Toast.LENGTH_LONG).show();
         MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.background_sound);
         mediaPlayer.start();
