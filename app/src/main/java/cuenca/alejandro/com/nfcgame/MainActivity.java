@@ -70,6 +70,7 @@ public class MainActivity extends Activity {
     @Bind(R.id.weapon) SimpleDraweeView weaponImage;
     @Bind(R.id.card_image) SimpleDraweeView cardImage;
     @Bind(R.id.enemy_weapon) SimpleDraweeView enemyWeaponImage;
+    @Bind(R.id.game_over_img) SimpleDraweeView gameOverImage;
 
     @Bind(R.id.punohover)ImageView punohover;
     @Bind(R.id.right_hand) ImageView rightHand;
@@ -85,7 +86,10 @@ public class MainActivity extends Activity {
     private String key = "null";
 
     private boolean over;
-    private static String base_url = "http://nfchero.localtunnel.me/";
+    private static String base_url = "http://nfcg.herokuapp.com/";
+
+
+    private CountDownTimer cdt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,14 +99,9 @@ public class MainActivity extends Activity {
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
         ButterKnife.bind(this);
-
         activity = this;
 
-        setImage(cardImage, "images/nothing.jpeg");
-
-        //playSound("sounds/monster-orc-dies.wav");
-
-        new CountDownTimer(300000, 1000) {
+         cdt = new CountDownTimer(300000, 1000) {
             public void onTick(long millisUntilFinished) {
                 timeCounter.setText(millisUntilFinished / 1000 + " s");
             }
@@ -110,8 +109,22 @@ public class MainActivity extends Activity {
             public void onFinish() {
                 timeCounter.setText("done!");
                 //TODO finish the game on 0 s
+                gameOver();
             }
         }.start();
+
+
+        MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.background_sound);
+
+
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mp.start();
+            }
+        });
+
+        mediaPlayer.start();
 
         handleIntent(getIntent());
     }
@@ -119,7 +132,8 @@ public class MainActivity extends Activity {
 
     @OnClick(R.id.btn_run)
     public void runAction(){
-        Toast.makeText(activity, "Correr como nena", Toast.LENGTH_SHORT).show();
+        Toast.makeText(activity, "Run like a chiken", Toast.LENGTH_SHORT).show();
+        volleyRequest(nfcTagValue +"/2");
     }
 
     @OnClick(R.id.btn_action1)
@@ -155,9 +169,11 @@ public class MainActivity extends Activity {
     }
 
     public void onNFCResponse(String value){
+
         Vibrator v = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
         v.vibrate(500);
         nfcTagValue = value;
+        gameOverImage.setVisibility(View.INVISIBLE);
         volleyRequest(value);
 
     }
@@ -193,8 +209,17 @@ public class MainActivity extends Activity {
     public void parseResponse(String response) throws JSONException {
         JSONObject jsonResponse = new JSONObject(response);
 
+        runImage.setVisibility(View.INVISIBLE);
+        cardHealth.setVisibility(View.INVISIBLE);
+        mosterLifeBar.setVisibility(View.INVISIBLE);
+        enemyWeaponImage.setVisibility(View.INVISIBLE);
+        enemyDamage.setVisibility(View.INVISIBLE);
+
+       //cardImage.setVisibility(View.INVISIBLE);
+
         over = jsonResponse.getBoolean("over");
         if(!over){
+
             key = jsonResponse.getString("key");
 
             JSONObject player = jsonResponse.getJSONObject("player");
@@ -227,9 +252,9 @@ public class MainActivity extends Activity {
                 weaponImage.setVisibility(View.VISIBLE);
             }
 
-
-
             if(jsonResponse.has("card") && !jsonResponse.isNull("card")) {
+                cardImage.setVisibility(View.VISIBLE);
+
                 JSONObject card = jsonResponse.getJSONObject("card");
 
                 setImage(cardImage, card.getString("image"));
@@ -253,24 +278,42 @@ public class MainActivity extends Activity {
                     enemyWeaponImage.setVisibility(View.VISIBLE);
                     enemyDamage.setText(weaponDamage(enemyWeapon));
                     enemyDamage.setVisibility(View.VISIBLE);
-                } else {
-                    runImage.setVisibility(View.INVISIBLE);
-                    cardHealth.setVisibility(View.INVISIBLE);
-                    mosterLifeBar.setVisibility(View.INVISIBLE);
-                    enemyWeaponImage.setVisibility(View.INVISIBLE);
-                    enemyDamage.setVisibility(View.INVISIBLE);
                 }
 
             }else{
-                setImage(cardImage, "images/nothing.jpeg");
+                cardImage.setVisibility(View.INVISIBLE);
                 cardHealth.setText("");
-                textEvents.setText("Aqui no hay nada");
-
+                textEvents.setText("Nothing Here!");
             }
         }else{
-            Toast.makeText(activity, "GAME OVER!!", Toast.LENGTH_LONG).show();
+            gameOver();
         }
 
+        if(jsonResponse.has("win")){
+            gameWin();
+        }
+
+    }
+
+    public void gameOver(){
+       if(cdt != null) {
+            cdt.cancel();
+        }
+        gameOverImage.setVisibility(View.VISIBLE);
+        setImage(gameOverImage, "/image/game_over.gif");
+        Toast.makeText(activity, "GAME OVER!!", Toast.LENGTH_LONG).show();
+        MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.background_sound);
+        mediaPlayer.start();
+    }
+
+    public void gameWin(){
+        if(cdt != null) {
+            cdt.cancel();
+        }
+        setImage(gameOverImage, "/image/game_over.gif");
+        Toast.makeText(activity, "You Win!!", Toast.LENGTH_LONG).show();
+        MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.background_sound);
+        mediaPlayer.start();
     }
 
     private void playSound(String sound) {
@@ -281,16 +324,12 @@ public class MainActivity extends Activity {
             mediaPlayer.setDataSource(activity, myUri);
             mediaPlayer.prepare();
             mediaPlayer.start();
-
-            //MediaPlayer mediaPlayer = MediaPlayer.create(activity, R.raw.bs);
-            //mediaPlayer.start(); // no need to call prepare(); create() does that for you
-
         }catch (Exception e){}
     }
 
     private void ChangeLifeBar(ImageView lifebar, int health){
+        lifebar.getLayoutParams().height = 100;
         lifebar.getLayoutParams().width = 45 * health;
-        //lifebar.getLayoutParams().height = 110;
         lifebar.requestLayout();
     }
 

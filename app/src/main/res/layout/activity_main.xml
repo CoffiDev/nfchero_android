@@ -46,18 +46,21 @@
 
     <TextView
         android:id="@+id/text_events"
+        android:gravity="center"
         android:layout_marginTop="430px"
         android:layout_marginLeft="130px"
         android:layout_width="820px"
-        android:layout_height="100px" />
+        android:layout_height="120px" />
 
 
     <ImageView
+        android:src="@drawable/background"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="620px"
         android:layout_marginLeft="120px"
-        android:layout_width="576px"
+        android:layout_width="840px"
         android:layout_height="576px"
+        android:scaleType="fitXY"
     />
 
 
@@ -127,10 +130,12 @@
     <ImageView
         android:id="@+id/image_life_bar"
         android:src="@drawable/life_bar"
+        android:scaleType="fitCenter"
         android:layout_marginLeft="355px"
         android:layout_marginTop="265px"
         android:layout_width="450px"
-        android:layout_height="100px" />
+        android:layout_height="100px"
+    />
 
     <ImageView
         android:src="@drawable/puno"
@@ -266,6 +271,14 @@
         android:layout_width="120px"
         android:layout_height="120px" />
 
+
+    <com.facebook.drawee.view.SimpleDraweeView
+        android:id="@+id/game_over_img"
+        android:visibility="invisible"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+    />
 
 
 
