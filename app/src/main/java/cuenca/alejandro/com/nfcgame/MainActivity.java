@@ -58,13 +58,22 @@ public class MainActivity extends Activity {
 
     @Bind(R.id.punohover)ImageView punohover;
     @Bind(R.id.image_life_bar) ImageView lifeBar;
+    @Bind(R.id.monster_life_bar) ImageView mosterLifeBar;
+    @Bind(R.id.right_hand) ImageView rightHand;
+    @Bind(R.id.weapon) SimpleDraweeView weaponImage;
+    @Bind(R.id.enemy_weapon) SimpleDraweeView enemyWeaponImage;
+    @Bind(R.id.enemy_damage) TextView enemyDamage;
 
     @Bind(R.id.time_counter) TextView timeCounter;
     @Bind(R.id.text_actions) TextView textActions;
     @Bind(R.id.text_events) TextView textEvents;
     @Bind(R.id.life_number) TextView lifeNumber;
     @Bind(R.id.card_health) TextView cardHealth;
-    @Bind(R.id.card_damage) TextView cardDamage;
+
+    @Bind(R.id.text_damage) TextView textDamage;
+    @Bind(R.id.text_duration) TextView textDuration;
+    @Bind(R.id.card_image) SimpleDraweeView cardImage;
+
 
     private Activity activity;
     private String nfcTagValue;
@@ -73,7 +82,6 @@ public class MainActivity extends Activity {
 
     private boolean over;
     private static String base_url = "http://hero.localtunnel.me/";
-    private SimpleDraweeView cardImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +93,8 @@ public class MainActivity extends Activity {
         ButterKnife.bind(this);
 
         activity = this;
+
+        setImage(cardImage, "images/nothing.jpeg");
 
         new CountDownTimer(300000, 1000) {
             public void onTick(long millisUntilFinished) {
@@ -151,8 +161,7 @@ public class MainActivity extends Activity {
             @Override
             public void onErrorResponse(VolleyError error) {
                 Log.d("Error", error.toString());
-                Log.d("Error", error.networkResponse.toString());
-                Toast.makeText(activity,"That didn't work!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity,"Try again!", Toast.LENGTH_SHORT).show();
             }
         });
         queue.add(stringRequest);
@@ -169,22 +178,64 @@ public class MainActivity extends Activity {
             JSONObject player = jsonResponse.getJSONObject("player");
 
             textActions.setText(jsonResponse.getString("action"));
+
+            ChangeLifeBar(lifeBar, player.getInt("health"));
             lifeNumber.setText(player.getString("health"));
 
-            lifeBar.getLayoutParams().width = 45 * player.getInt("health");
-            lifeBar.getLayoutParams().height = 110;
-            lifeBar.requestLayout();
 
-            if(jsonResponse.has("card")) {
+            if (player.isNull("weapon")) {
+                textDamage.setVisibility(View.INVISIBLE);
+                textDuration.setVisibility(View.INVISIBLE);
+                rightHand.setVisibility(View.VISIBLE);
+                weaponImage.setVisibility(View.INVISIBLE);
+            } else {
+                JSONObject weapon = player.getJSONObject("weapon");
+
+                textDamage.setText(weapon.getString("damage"));
+                textDuration.setText(weapon.getString("duration"));
+                textDamage.setVisibility(View.VISIBLE);
+                textDuration.setVisibility(View.VISIBLE);
+
+                rightHand.setVisibility(View.INVISIBLE);
+                setImage(weaponImage, weapon.getString("image"));
+                weaponImage.setVisibility(View.VISIBLE);
+            }
+
+
+
+            if(jsonResponse.has("card") && !jsonResponse.isNull("card")) {
                 JSONObject card = jsonResponse.getJSONObject("card");
-                setCardImage(card.getString("image"));
-                cardHealth.setText(getCardHealth(card));
-                cardDamage.setText(getCardDamage(card));
+
+                setImage(cardImage, card.getString("image"));
                 textEvents.setText(card.getString("desc"));
+
+                if (card.getString("type").equals("minion") || card.getString("type").equals("boss")) {
+                    ChangeLifeBar(mosterLifeBar, card.getInt("health"));
+
+                    cardHealth.setText(card.getString("health"));
+                    cardHealth.setVisibility(View.VISIBLE);
+                    mosterLifeBar.setVisibility(View.VISIBLE);
+
+                    JSONObject enemyWeapon = card.getJSONObject("punch");
+
+                    if (card.has("weapon") && !card.isNull("weapon")) {
+                      enemyWeapon = card.getJSONObject("weapon");
+                    }
+
+                    setImage(enemyWeaponImage, enemyWeapon.getString("image"));
+                    enemyWeaponImage.setVisibility(View.VISIBLE);
+                    enemyDamage.setText(weaponDamage(enemyWeapon));
+                    enemyDamage.setVisibility(View.VISIBLE);
+                } else {
+                    cardHealth.setVisibility(View.INVISIBLE);
+                    mosterLifeBar.setVisibility(View.INVISIBLE);
+                    enemyWeaponImage.setVisibility(View.INVISIBLE);
+                    enemyDamage.setVisibility(View.INVISIBLE);
+                }
+
             }else{
-                setCardImage("http://alessiabombaci.com/wordpress/wp-content/uploads/2011/10/old-shadow-in-an-empty-room.jpg");
+                setImage(cardImage, "images/nothing.jpeg");
                 cardHealth.setText("");
-                cardDamage.setText("");
                 textEvents.setText("Aqui no hay nada");
 
             }
@@ -194,34 +245,27 @@ public class MainActivity extends Activity {
 
     }
 
-
-    private String getCardHealth(JSONObject card) throws JSONException {
-        if (card.has("health")) {
-            return card.getString("health");
-        }
-        return "";
+    private void ChangeLifeBar(ImageView lifebar, int health){
+        lifebar.getLayoutParams().width = 45 * health;
+        lifebar.getLayoutParams().height = 110;
+        lifebar.requestLayout();
     }
 
 
-    private String getCardDamage(JSONObject card) throws JSONException {
-        if (card.has("weapon")){
-            JSONObject weapon = card.getJSONObject("weapon");
-            return weapon.getString("damage");
+    private String weaponDamage(JSONObject weapon) throws JSONException {
+        if (weapon.has("duration") && !weapon.isNull("duration")){
+            return weapon.getString("damage") + "/" + weapon.getString("duration");
         }
-        if (card.has("damage")) {
-            return card.getString("damage");
-        }
-        return "";
+        return weapon.getString("damage");
     }
 
-    public void setCardImage(String image) {
+    public void setImage(SimpleDraweeView view, String image) {
         Uri uri = Uri.parse( base_url + image);
-        cardImage = (SimpleDraweeView) findViewById(R.id.card_image);
         DraweeController controller = Fresco.newDraweeControllerBuilder()
                 .setUri(uri)
                 .setAutoPlayAnimations(true)
                 .build();
-        cardImage.setController(controller);
+        view.setController(controller);
     }
 
 
