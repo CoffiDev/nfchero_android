@@ -23,6 +23,17 @@
         android:layout_height="130px" />
 
     <TextView
+        android:text="00"
+        android:textSize="80px"
+        android:textColor="@android:color/black"
+        android:id="@+id/life_number"
+        android:layout_marginRight="100px"
+        android:layout_marginTop="270px"
+        android:layout_alignParentRight="true"
+        android:layout_width="100px"
+        android:layout_height="100px" />
+
+    <TextView
         android:id="@+id/text_actions"
         android:text="Correr"
         android:textSize="60px"
@@ -41,6 +52,7 @@
         android:layout_width="850px"
         android:layout_height="200px" />
 
+
     <ImageView
         android:layout_marginTop="620px"
         android:layout_marginLeft="120px"
@@ -54,8 +66,31 @@
         android:layout_marginLeft="120px"
         android:layout_width="850px"
         android:layout_height="580px"
+        android:scaleType="fitXY"
     />
 
+    <TextView
+        android:text="0"
+        android:gravity="center"
+        android:textSize="80px"
+        android:textColor="@android:color/black"
+        android:id="@+id/card_health"
+        android:layout_marginTop="570px"
+        android:layout_marginLeft="120px"
+        android:layout_width="120px"
+        android:layout_height="120px" />
+
+    <TextView
+        android:text="0"
+        android:gravity="center"
+        android:textSize="80px"
+        android:textColor="@android:color/black"
+        android:id="@+id/card_damage"
+        android:layout_marginRight="120px"
+        android:layout_marginTop="570px"
+        android:layout_alignParentRight="true"
+        android:layout_width="120px"
+        android:layout_height="120px" />
 
 
     <ImageView

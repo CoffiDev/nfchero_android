@@ -2,6 +2,7 @@ package cuenca.alejandro.com.nfcgame;
 
 import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
@@ -46,7 +47,9 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.OnTouch;
 import cuenca.alejandro.com.nfcgame.Volley.VolleySingleton;
-import cuenca.alejandro.com.nfcgame.Models.*;
+
+import android.os.Vibrator;
+
 
 public class MainActivity extends Activity {
 
@@ -58,9 +61,19 @@ public class MainActivity extends Activity {
 
     @Bind(R.id.time_counter) TextView timeCounter;
     @Bind(R.id.text_actions) TextView textActions;
+    @Bind(R.id.text_events) TextView textEvents;
+    @Bind(R.id.life_number) TextView lifeNumber;
+    @Bind(R.id.card_health) TextView cardHealth;
+    @Bind(R.id.card_damage) TextView cardDamage;
 
     private Activity activity;
-    private int nfcTagValue;
+    private String nfcTagValue;
+
+    private String key = "null";
+
+    private boolean over;
+    private static String base_url = "http://hero.localtunnel.me/";
+    private SimpleDraweeView cardImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,16 +85,6 @@ public class MainActivity extends Activity {
         ButterKnife.bind(this);
 
         activity = this;
-
-        Uri uri = Uri.parse("http://nfcg.herokuapp.com/images/12035409_10153719305827229_1005534528_n.gif");
-        SimpleDraweeView draweeView = (SimpleDraweeView) findViewById(R.id.card_image);
-
-        DraweeController controller = Fresco.newDraweeControllerBuilder()
-                .setUri(uri)
-                .setAutoPlayAnimations(true)
-        .build();
-        draweeView.setController(controller);
-
 
         new CountDownTimer(300000, 1000) {
             public void onTick(long millisUntilFinished) {
@@ -100,11 +103,13 @@ public class MainActivity extends Activity {
     @OnClick(R.id.btn_action1)
     public void actionBtn1(){
         Toast.makeText(activity, "Apretaste el boton de golpe", Toast.LENGTH_SHORT).show();
+        volleyRequest(nfcTagValue + "/0");
     }
 
     @OnClick(R.id.btn_action2)
     public void actionBtn2(){
         Toast.makeText(activity, "Apretaste el boton secundario", Toast.LENGTH_SHORT).show();
+        volleyRequest(nfcTagValue + "/1");
     }
 
     @OnTouch(R.id.btn_action1)
@@ -118,16 +123,17 @@ public class MainActivity extends Activity {
     }
 
     public void onNFCResponse(String value){
+        Vibrator v = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
+        v.vibrate(500);
+        nfcTagValue = value;
         volleyRequest(value);
+
     }
 
     public void volleyRequest(String value) {
-        String url ="http://nfcg.herokuapp.com/game/";
+        String url = base_url + "game/" + key + "/" + value;
 
-        if(value == "")
-            url += "hola";
-        else
-            url += value;
+        Log.d("URL", url);
 
         RequestQueue queue = Volley.newRequestQueue(this);
 
@@ -137,11 +143,15 @@ public class MainActivity extends Activity {
                     public void onResponse(String response) {
                         try{
                             parseResponse(response);
-                        }catch (Exception e){}
+                        }catch (Exception e){
+                            Log.d("Errors", e.toString());
+                        }
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                Log.d("Error", error.toString());
+                Log.d("Error", error.networkResponse.toString());
                 Toast.makeText(activity,"That didn't work!", Toast.LENGTH_SHORT).show();
             }
         });
@@ -152,18 +162,68 @@ public class MainActivity extends Activity {
     public void parseResponse(String response) throws JSONException {
         JSONObject jsonResponse = new JSONObject(response);
 
-        JSONObject playerJSON = jsonResponse.getJSONObject("player");
-        Player player = new Player(
-                (String) playerJSON.getString("health"),
-                (String) playerJSON.getString("damage"),
-                null);
+        over = jsonResponse.getBoolean("over");
+        if(!over){
+            key = jsonResponse.getString("key");
 
-        Log.d("Player_logs", player.getHealth());
-        lifeBar.getLayoutParams().width = 45 * (Integer.parseInt(player.getHealth()) -1 );
-        lifeBar.getLayoutParams().height = 100;
-        lifeBar.requestLayout();
+            JSONObject player = jsonResponse.getJSONObject("player");
+
+            textActions.setText(jsonResponse.getString("action"));
+            lifeNumber.setText(player.getString("health"));
+
+            lifeBar.getLayoutParams().width = 45 * player.getInt("health");
+            lifeBar.getLayoutParams().height = 110;
+            lifeBar.requestLayout();
+
+            if(jsonResponse.has("card")) {
+                JSONObject card = jsonResponse.getJSONObject("card");
+                setCardImage(card.getString("image"));
+                cardHealth.setText(getCardHealth(card));
+                cardDamage.setText(getCardDamage(card));
+                textEvents.setText(card.getString("desc"));
+            }else{
+                setCardImage("http://alessiabombaci.com/wordpress/wp-content/uploads/2011/10/old-shadow-in-an-empty-room.jpg");
+                cardHealth.setText("");
+                cardDamage.setText("");
+                textEvents.setText("Aqui no hay nada");
+
+            }
+        }else{
+            Toast.makeText(activity, "GAME OVER!!", Toast.LENGTH_LONG).show();
+        }
 
     }
+
+
+    private String getCardHealth(JSONObject card) throws JSONException {
+        if (card.has("health")) {
+            return card.getString("health");
+        }
+        return "";
+    }
+
+
+    private String getCardDamage(JSONObject card) throws JSONException {
+        if (card.has("weapon")){
+            JSONObject weapon = card.getJSONObject("weapon");
+            return weapon.getString("damage");
+        }
+        if (card.has("damage")) {
+            return card.getString("damage");
+        }
+        return "";
+    }
+
+    public void setCardImage(String image) {
+        Uri uri = Uri.parse( base_url + image);
+        cardImage = (SimpleDraweeView) findViewById(R.id.card_image);
+        DraweeController controller = Fresco.newDraweeControllerBuilder()
+                .setUri(uri)
+                .setAutoPlayAnimations(true)
+                .build();
+        cardImage.setController(controller);
+    }
+
 
     /*
     *
