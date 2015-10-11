@@ -11,7 +11,13 @@ import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,92 +28,139 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import butterknife.Bind;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+import butterknife.OnTouch;
 import cuenca.alejandro.com.nfcgame.Volley.VolleySingleton;
+import cuenca.alejandro.com.nfcgame.Models.*;
 
 public class MainActivity extends Activity {
 
     public static final String MIME_TEXT_PLAIN = "text/plain";
-    public static final String TAG = "NfcDemo";
-
-    public static Activity activity;
-
-    private int nfcTagValue;
-
-    private TextView mTextView;
-    private TextView responsetxt;
-
     private NfcAdapter mNfcAdapter;
+
+    @Bind(R.id.punohover)ImageView punohover;
+    @Bind(R.id.image_life_bar) ImageView lifeBar;
+
+    @Bind(R.id.time_counter) TextView timeCounter;
+    @Bind(R.id.text_actions) TextView textActions;
+
+    private Activity activity;
+    private int nfcTagValue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+
+        ButterKnife.bind(this);
 
         activity = this;
 
-        mTextView = (TextView) findViewById(R.id.nfc_text);
-        responsetxt = (TextView) findViewById(R.id.response);
 
+        new CountDownTimer(300000, 1000) {
+            public void onTick(long millisUntilFinished) {
+                timeCounter.setText(millisUntilFinished / 1000 + " s");
+            }
 
-        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-
-        if (mNfcAdapter == null) {
-            // Stop here, we definitely need NFC
-            Toast.makeText(this, "This device doesn't support NFC.", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-
-        }
-
-        if (!mNfcAdapter.isEnabled()) {
-            mTextView.setText("NFC is disabled.");
-        } else {
-            mTextView.setText("yea nfc in enabled");
-        }
-
+            public void onFinish() {
+                timeCounter.setText("done!");
+                //TODO finish the game on 0 s
+            }
+        }.start();
 
         handleIntent(getIntent());
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        /**
-         * It's important, that the activity is in the foreground (resumed). Otherwise
-         * an IllegalStateException is thrown.
-         */
-        setupForegroundDispatch(this, mNfcAdapter);
+    @OnClick(R.id.btn_action1)
+    public void actionBtn1(){
+        Toast.makeText(activity, "Apretaste el boton de golpe", Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    protected void onPause() {
-        /**
-         * Call this before onPause, otherwise an IllegalArgumentException is thrown as well.
-         */
-        stopForegroundDispatch(this, mNfcAdapter);
-
-        super.onPause();
+    @OnClick(R.id.btn_action2)
+    public void actionBtn2(){
+        Toast.makeText(activity, "Apretaste el boton secundario", Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        /**
-         * This method gets called, when a new Intent gets associated with the current activity instance.
-         * Instead of creating a new activity, onNewIntent will be called. For more information have a look
-         * at the documentation.
-         *
-         * In our case this method gets called, when the user attaches a Tag to the device.
-         */
-        handleIntent(intent);
+    @OnTouch(R.id.btn_action1)
+    public boolean changeimage(View v, MotionEvent event){
+        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+            punohover.setVisibility(View.VISIBLE);
+        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+            punohover.setVisibility(View.INVISIBLE);
+        }
+        return false;
     }
 
+    public void onNFCResponse(String value){
+        volleyRequest(value);
+    }
+
+    public void volleyRequest(String value) {
+        String url ="http://nfcg.herokuapp.com/game/";
+
+        if(value == "")
+            url += "hola";
+        else
+            url += value;
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try{
+                            parseResponse(response);
+                        }catch (Exception e){}
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(activity,"That didn't work!", Toast.LENGTH_SHORT).show();
+            }
+        });
+        queue.add(stringRequest);
+    }
+
+
+    public void parseResponse(String response) throws JSONException {
+        JSONObject jsonResponse = new JSONObject(response);
+
+        JSONObject playerJSON = jsonResponse.getJSONObject("player");
+        Player player = new Player((String) playerJSON.getString("health"), (String) playerJSON.getString("damage"), null);
+
+        Log.d("Player_logs", player.getHealth());
+        lifeBar.getLayoutParams().width = 45 * (Integer.parseInt(player.getHealth()) -1 );
+        lifeBar.getLayoutParams().height = 100;
+        lifeBar.requestLayout();
+
+    }
+
+    /*
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    */
     private void handleIntent(Intent intent) {
         String action = intent.getAction();
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
@@ -119,7 +172,7 @@ public class MainActivity extends Activity {
                 new NdefReaderTask().execute(tag);
 
             } else {
-                Log.d(TAG, "Wrong mime type: " + type);
+                Log.d("NFCExample", "Wrong mime type: " + type);
             }
         } else if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
 
@@ -135,55 +188,6 @@ public class MainActivity extends Activity {
                 }
             }
         }
-    }
-
-    public static void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
-        final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
-        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-        final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
-
-        IntentFilter[] filters = new IntentFilter[1];
-        String[][] techList = new String[][]{};
-
-        // Notice that this is the same filter as in our manifest.
-        filters[0] = new IntentFilter();
-        filters[0].addAction(NfcAdapter.ACTION_NDEF_DISCOVERED);
-        filters[0].addCategory(Intent.CATEGORY_DEFAULT);
-        try {
-            filters[0].addDataType(MIME_TEXT_PLAIN);
-        } catch (IntentFilter.MalformedMimeTypeException e) {
-            throw new RuntimeException("Check your mime type.");
-        }
-
-        adapter.enableForegroundDispatch(activity, pendingIntent, filters, techList);
-    }
-
-
-    public static void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
-        adapter.disableForegroundDispatch(activity);
-    }
-
-    public void volleyRequest() {
-
-        RequestQueue queue = Volley.newRequestQueue(this);
-        String url ="http://nfcg.herokuapp.com/game/hola";
-
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        // Display the first 500 characters of the response string.
-                        mTextView.setText("Response is: "+ response);
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                mTextView.setText("That didn't work!");
-            }
-        });
-// Add the request to the RequestQueue.
-        queue.add(stringRequest);
     }
 
     public class NdefReaderTask extends AsyncTask<Tag, Void, String> {
@@ -247,12 +251,62 @@ public class MainActivity extends Activity {
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
-                mTextView.setText("Read content: " + result);
-                volleyRequest();
-
+                onNFCResponse(result);
             }
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        /* It's important, that the activity is in the foreground (resumed). Otherwise an IllegalStateException is thrown.*/
+        setupForegroundDispatch(this, mNfcAdapter);
+    }
+
+    @Override
+    protected void onPause() {
+        /* Call this before onPause, otherwise an IllegalArgumentException is thrown as well. */
+        stopForegroundDispatch(this, mNfcAdapter);
+        super.onPause();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        /**
+         * This method gets called, when a new Intent gets associated with the current activity instance.
+         * Instead of creating a new activity, onNewIntent will be called. For more information have a look
+         * at the documentation.
+         *
+         * In our case this method gets called, when the user attaches a Tag to the device.
+         */
+        handleIntent(intent);
+    }
+
+    public static void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
+        final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
+
+        IntentFilter[] filters = new IntentFilter[1];
+        String[][] techList = new String[][]{};
+
+        // Notice that this is the same filter as in our manifest.
+        filters[0] = new IntentFilter();
+        filters[0].addAction(NfcAdapter.ACTION_NDEF_DISCOVERED);
+        filters[0].addCategory(Intent.CATEGORY_DEFAULT);
+        try {
+            filters[0].addDataType(MIME_TEXT_PLAIN);
+        } catch (IntentFilter.MalformedMimeTypeException e) {
+            throw new RuntimeException("Check your mime type.");
+        }
+
+        adapter.enableForegroundDispatch(activity, pendingIntent, filters, techList);
+    }
+
+
+    public static void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
+        adapter.disableForegroundDispatch(activity);
+    }
 
 }
